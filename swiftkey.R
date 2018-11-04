@@ -54,7 +54,7 @@ tokens_test <- corpus_test %>%
            remove_numbers = T,
            remove_twitter = T,
            remove_url = T,
-           ngrams = c(1:4),
+           ngrams = c(2:4),
            concatenator = " ") %>%
     tokens_tolower
 
@@ -182,7 +182,7 @@ next_word_backoff_search <- function(the_string){
         i <- length(the_tokens) #sum(stri_count_charclass(the_words, "[[:space:][:punct:]]")) 
         # j, add a word to lookup phrase but don't increase ngram 
         # if last word is incomplete
-        j <- ifelse(grepl("[[:space:][:punct:]]$", the_string), 0, 1) # ifelse(sum(stri_count_words(the_words)) > i, 1, 0) 
+        j <- ifelse(grepl("[[:space:][:punct:]]$", the_string), 0, 1)
         i <- ifelse(i > 3, 3, i) # restrict to a max of 4gram lookup
         ngrams <- as.numeric(NULL)
         while(length(ngrams) == 0 & i >= 0){
@@ -201,3 +201,35 @@ next_word_backoff_search <- function(the_string){
         next_words[!is.na(next_words)]  
 }
 
+
+## Test effectiveness of next word model
+library(data.table)
+library(lineprof)
+
+validate_model <- function(){
+    validation_dt <- data.table(ngram = sample(tokens_test[[1]], 1000, replace = F), words = NA_integer_, score = NA_integer_)
+    system.time(
+        for(i in 1:nrow(validation_dt)){
+            test_ngram <- validation_dt[i,ngram]
+            num_words_test <- stri_count_boundaries(test_ngram)
+            next_word_test <- stri_extract_last_words(test_ngram)
+            the_string_test <- gsub(next_word_test, "", test_ngram)
+            next_words <- next_word_backoff_search(the_string_test)
+            the_res <- which(grepl(next_word_test, next_words))
+            if(sum(the_res) == 0){
+                the_score <- 0
+            } else if(1 %in% the_res){
+                the_score <- 4
+            } else if(2 %in% the_res){
+                the_score <- 3
+            } else if (3 %in% the_res){
+                the_score <- 2
+            } else {
+                the_score <- 1
+            }
+            validation_dt[ngram == test_ngram, `:=`(words = num_words_test, 
+                                                    score = the_score)]
+        }
+    )
+    validation_dt
+}
