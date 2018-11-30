@@ -8,9 +8,9 @@ The predictive text algorithm
 ========================================================
 
 - Frequencies of 1--5 gram phrases were calculated, smoothed (Good-Turing Discounting) and stored in tables 
-    - Using the 5000 most frequent words appearing in 100000 sentences randonmly sampled each of News, Blogs and Twitter sources (corpus provided by SwiftKey).
-- The algorithm uses a Markov Chain "Backoff" approach:
-    - Provided text, strip the largest possible n-gram from the end (up to 4 words) for lookup in the stored n-gram frequency tables
+    - 5000 most frequent words appearing in 10000 sentences randonmly sampled each of News, Blogs and Twitter sources (corpus provided by SwiftKey).
+- The Markov Chain "Backoff" approach:
+    - Provided text -> strip n-gram from the end (up to 4 words) -> lookup in the stored n-gram frequency tables
     - Note, if the last word is **incomplete** (no trailing space or punctuation) prediction is for the **current** last word, not the **next** word
     - Search through the n-gram frequency tables (from greatest to least **n**) until matches are found
     - Return the last words of the 4 most frequent **n+1**-grams in decreasing order of frequency
@@ -30,27 +30,20 @@ Next word algorithm in use
 ========================================================
 The *Predictive Text App* provides a web interface to use the algorithm.
 
-- Typing in the text area box automatically begins the Markov Chain Backoff analysis
-- Dynamic **shortcut buttons** display predictions in decreasing order of likelihood (reinforced with color)
-- Responds to every keystroke
-- Clicking **Batch/Process** button submits text input for analysis
-    - Returns the text, color coded according to predictions
-    - Generates a bar chart and prediction success percentage value base on the provided text
 ![title](UI_figure.png)
 
 Competing approaches & conclusions
 ===================================
 
-Several alternative approaches were attempted and compared prior to choosing the Markov Chain Backoff algorithm. These included:
+Alternative approaches considered:
 
-- Markov Chain Backoff with Naive Bayes prediction of text source (News, Blogs or Twitter) 
-    - Perfomance penatly of Naive Bayes sub-model provided no measurable improvement in predictions
+- Markov Chain Backoff + Naive Bayes source prediction (News, Blogs or Twitter) 
+    - Perfomance penalty, no measurable improvement in predictions
 - Co-occurence model based on the *fcm()* function of the *quanteda* R package
     - Significantly lower success rates
 - Rare word co-occurence weighting
-    - Increase weights of n-grams containing nearby "rare" words found in the provided text
     - Performance penalty yet did not produce improved results 
 
 Conclusion
 ----------
-The Markov Chain Backoff approach provided an easy way to store a massive amount of training data (the corpus) in compact frequency lookup tables which likely contributes to reasonable speed of execution. 
+Success of the Markov Chain Backoff approach lies in storing a massive amount of training data (the corpus) in compact frequency lookup tables.
