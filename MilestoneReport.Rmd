@@ -1,0 +1,137 @@
+---
+title: "Text Prediction Milestone Report"
+author: "Mark St. John"
+date: '2018-10-22'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F)
+```
+
+# Introduction
+
+Herein is a milestone report detailing progress towards developing a predictive text application.
+
+Due to the complexities, subtleties and ever-changing nature of language, the most successful predictive text algorithms tend to take the approach of trainig models on a large body of text sources "in the wild" rather than alternatives such as applying grammatical rules (although the combination of both has potential to be even better).
+
+To this end we will be using a large body of text (corpus) provided by SwiftKey as the training source for our predictive text models. Here we report on the nature of the data and search for insight on effective strategies on how to build text predictive algorithms.
+
+# The Data: Acquisition, Cleaning and Analysis
+
+The data were downloaded from [SwiftKey's website (large zip archive)](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). The archive contains four main directories for four different languages; we are working only with English ("./final/en_US"). The directory contains three files of sentences sampled from US New, Blogs and Twitter sources in plain-text format.
+
+```{r get_data, message = F, cache = T}
+library(readtext)
+library(quanteda)
+library(knitr)
+library(wordcloud)
+qopts <- quanteda_options()
+quanteda_options(threads = 6)
+
+# Define data investigative plotting functions
+dfm_freq_plot <- function(dfm){
+    library(ggplot2)
+    features_dfm <- textstat_frequency(dfm, 100)
+    features_dfm$stopword <- features_dfm$feature %in% stopwords()
+    features_dfm$feature <- with(features_dfm, 
+                                 reorder(feature, -frequency))
+    ggplot(features_dfm, aes(x = feature, 
+                             y = frequency, 
+                             color = stopword)) +
+        geom_point() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1), 
+              panel.grid.major = element_blank())
+}
+
+plot_coverage <- function(dfm) {
+    library(ggplot2)
+    features_dfm <- textstat_frequency(dfm)
+    features_dfm$feature <-
+        with(features_dfm, reorder(feature, frequency))
+    per_word_instance <- NA_real_
+    unique_words <- NA_integer_
+    total_feature_frequency <- sum(features_dfm$frequency)
+    for (i in 1:100) {
+        unique_words[i] <- round(length(features_dfm$feature) * i / 100, 0)
+        the_words <-
+            as.character(features_dfm$feature[1:unique_words[i]])
+        freq_of_the_words <-
+            sum(features_dfm[1:unique_words[i], "frequency"])
+        per_word_instance[i] <-
+            freq_of_the_words / total_feature_frequency * 100
+    }
+    ggplot(
+        data.frame(unique_words, 
+                   per_word_instance),
+        aes(x = unique_words, 
+            y = per_word_instance)) +
+        geom_line() +
+        ggtitle("Coverage")
+}
+
+# Load the data
+the_texts <- readtext("./final/en_US/*.txt")
+text_names <- the_texts[["doc_id"]]
+q_corpus <- corpus(the_texts)
+rm(the_texts) # free-up memory
+
+kable(summary(q_corpus))
+```
+
+The above table outlines the considerable size and features of the data we are working with.
+
+Next we process this corpus into tokens to explore its features and how to work with it. This first required cleaning of the corpus. Non-word text that would interfere with model development (e.g., numbers, symbols) were removed and case was standarzized to only lowercase.
+
+```{r, message = F, cache = T}
+# get tokens from the corpus
+my_tokens <- q_corpus %>% 
+    tokens(remove_symbols = T,
+           remove_punct = T,
+           remove_separators = T, 
+           remove_numbers = T,
+           remove_twitter = T,
+           remove_url = T) %>%
+    tokens_tolower
+rm(q_corpus) # free-up memory
+
+# Create a frequency matrix of tokens in the corpus
+dfm_1gram <- dfm(my_tokens, groups = text_names)
+# Plot the most frequent terms
+dfm_freq_plot(dfm_1gram)
+# Plot coverage of most frequent terms to determine how many words to keep
+# (ie remove words that provide little value)
+plot_coverage(dfm_1gram)
+# Trimming infrequent tokens 
+dfm_1gram <- dfm_trim(dfm_1gram, 
+                    min_termfreq = 5000, 
+                    termfreq_type = "rank")
+textplot_wordcloud(dfm_1gram)
+```
+
+The above plots demonstrate that by far the most frequent words in the corpus are "stopwords" (such as "the", "i", "and" and so on), shown as green points. Thus, it will be important to keep these for algorithm development. Also, about 98% of all words in the entire corpus (of almost 120 million words) could be covered with only the 5000 most frequently used words in the corpus.
+
+The wordcloud displays the relative frequency (by size) of the 500 most frequent words. Clearly there are very few words that dominate the corpus, and a highly skewed tail of much less frequent words.
+
+Next we trimmed the set of tokens to keep from the corpus to only the 5000 most frequent. Using only this trimmed set we then searched for 2grams (bi-grams, two-word tokens) and explored their frequencies as we did for single tokens above
+
+
+```{r ngrams, message=F, cache=T}
+my_tokens_reduced <- tokens_select(my_tokens, dfm_1gram@Dimnames$features) 
+dfm_2gram <- dfm(my_tokens_reduced, ngrams = 2, concatenator = " ")
+dfm_freq_plot(dfm_2gram)
+plot_coverage(dfm_2gram)
+textplot_wordcloud(dfm_2gram)
+```
+
+ 
+# The Plan
+ 
+I will trim tokens to only the most common in order to achieve an app that balances low-overhead and responsiveness with high accurracy in word predictions. It also follows that ngrams made from uncommon terms will be uncommon as well and so building of ngram phrases will be done with the selection of most common words.
+
+Initial exploration of removing certain classes of words (especially stopwords) proved that this was unneccassary and even counter productive to acheiving prediction as these are some of the most common words people use (and type). Also, some effort was put into developing a series of regular expressions that removed URLs and hashtags (etc), unicode symbols and more, from the tokens. However, these proved unneccessary because later removal of infrequent terms had the same effect.
+
+Using a Markov Chain approach matrices of most frequent next words for ngrams will be built and stored for "lookup" by the app. Lookup will depend on how many words are available and back off to fewer words until a high probability match is found.
+
+
+ 
