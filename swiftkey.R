@@ -1,7 +1,7 @@
-library(readtext)
-library(quanteda)
-qopts <- quanteda_options()
-quanteda_options(threads = 3)
+# library(readtext)
+# library(quanteda)
+# qopts <- quanteda_options()
+# quanteda_options(threads = 3)
 
 ## Create train and test subsets of data ----
 
@@ -27,100 +27,100 @@ quanteda_options(threads = 3)
 # }
 # rm(list = ls())
 #
-# texts_train <- readtext("./corpus_train_EN/*.txt") # use reduced set
-# # texts_train <- readtext("./final/en_US/*.txt")  # use full set
-# corpus_train <- corpus(texts(texts_train))
-# corpus_train <- corpus(texts(corpus_train, groups = rep(1, ndoc(corpus_train)))) # collapse documents
+texts_train <- readtext("./corpus_train_EN/*.txt") # use reduced set
+# texts_train <- readtext("./final/en_US/*.txt")  # use full set
+corpus_train <- corpus(texts(texts_train))
+corpus_train <- corpus(texts(corpus_train, groups = rep(1, ndoc(corpus_train)))) # collapse documents
+
+rm(texts_train)
+
+tokens_train <- corpus_train %>%
+    tokens(remove_symbols = T,
+           remove_punct = T,
+           remove_separators = T,
+           remove_numbers = T,
+           remove_twitter = T,
+           remove_url = T) %>%
+    tokens_tolower
+
+rm(corpus_train)
+
+
+texts_test <- readtext("./corpus_test_EN/*.txt") # readtext("./final/en_US/*.txt")
+corpus_test <- corpus(texts(texts_test))
+corpus_test <- corpus(texts(corpus_test, groups = rep(1, ndoc(corpus_test)))) # collapse documents
+
+rm(texts_test)
+
+tokens_test <- corpus_test %>%
+    tokens(remove_symbols = T,
+           remove_punct = T,
+           remove_separators = T,
+           remove_numbers = T,
+           remove_twitter = T,
+           remove_url = T,
+           ngrams = c(2:5),
+           concatenator = " ") %>%
+    tokens_tolower
+
+rm(corpus_test)
+
+# Strip infrequent tokens out of my_tokens
+# reduces sparcity and massively reduces matrix memory requirements
 #
-# rm(texts_train)
+# dfm_freq_plot <- function(dfm){
+#     library(ggplot2)
+#     features_dfm <- textstat_frequency(dfm, 100)
+#     features_dfm$stopword <- features_dfm$feature %in% stopwords()
+#     features_dfm$feature <- with(features_dfm, reorder(feature, -frequency))
+#     ggplot(features_dfm, aes(x = feature, y = frequency, color = stopword)) +
+#         geom_point() +
+#         theme(axis.text.x = element_text(angle = 90, hjust = 1),
+#               panel.grid.major = element_blank(),
+#               legend.position="none")
+# }
+
+# plot_coverage <- function(dfm) {
+#     library(ggplot2)
+#     features_dfm <- textstat_frequency(dfm)
+#     features_dfm$feature <-
+#         with(features_dfm, reorder(feature, frequency))
 #
-# tokens_train <- corpus_train %>%
-#     tokens(remove_symbols = T,
-#            remove_punct = T,
-#            remove_separators = T,
-#            remove_numbers = T,
-#            remove_twitter = T,
-#            remove_url = T) %>%
-#     tokens_tolower
+#     per_word_instance <- NA_real_
+#     unique_words <- NA_integer_
+#     total_feature_frequency <- sum(features_dfm$frequency)
+#     for (i in 1:100) {
+#         unique_words[i] <- round(length(features_dfm$feature) * i / 100, 0)
+#         the_words <-
+#             as.character(features_dfm$feature[1:unique_words[i]])
+#         freq_of_the_words <-
+#             sum(features_dfm[1:unique_words[i], "frequency"])
+#         per_word_instance[i] <-
+#             freq_of_the_words / total_feature_frequency * 100
+#     }
 #
-# rm(corpus_train)
-#
-#
-# texts_test <- readtext("./corpus_test_EN/*.txt") # readtext("./final/en_US/*.txt")
-# corpus_test <- corpus(texts(texts_test))
-# corpus_test <- corpus(texts(corpus_test, groups = rep(1, ndoc(corpus_test)))) # collapse documents
-#
-# rm(texts_test)
-#
-# tokens_test <- corpus_test %>%
-#     tokens(remove_symbols = T,
-#            remove_punct = T,
-#            remove_separators = T,
-#            remove_numbers = T,
-#            remove_twitter = T,
-#            remove_url = T,
-#            ngrams = c(2:5),
-#            concatenator = " ") %>%
-#     tokens_tolower
-#
-# rm(corpus_test)
-#
-# # Strip infrequent tokens out of my_tokens
-# # reduces sparcity and massively reduces matrix memory requirements
-# #
-# # dfm_freq_plot <- function(dfm){
-# #     library(ggplot2)
-# #     features_dfm <- textstat_frequency(dfm, 100)
-# #     features_dfm$stopword <- features_dfm$feature %in% stopwords()
-# #     features_dfm$feature <- with(features_dfm, reorder(feature, -frequency))
-# #     ggplot(features_dfm, aes(x = feature, y = frequency, color = stopword)) +
-# #         geom_point() +
-# #         theme(axis.text.x = element_text(angle = 90, hjust = 1),
-# #               panel.grid.major = element_blank(),
-# #               legend.position="none")
-# # }
-#
-# # plot_coverage <- function(dfm) {
-# #     library(ggplot2)
-# #     features_dfm <- textstat_frequency(dfm)
-# #     features_dfm$feature <-
-# #         with(features_dfm, reorder(feature, frequency))
-# #
-# #     per_word_instance <- NA_real_
-# #     unique_words <- NA_integer_
-# #     total_feature_frequency <- sum(features_dfm$frequency)
-# #     for (i in 1:100) {
-# #         unique_words[i] <- round(length(features_dfm$feature) * i / 100, 0)
-# #         the_words <-
-# #             as.character(features_dfm$feature[1:unique_words[i]])
-# #         freq_of_the_words <-
-# #             sum(features_dfm[1:unique_words[i], "frequency"])
-# #         per_word_instance[i] <-
-# #             freq_of_the_words / total_feature_frequency * 100
-# #     }
-# #
-# #     ggplot(
-# #         data.frame(unique_words, per_word_instance),
-# #         aes(x = unique_words, y = per_word_instance)
-# #     ) +
-# #         geom_line() +
-# #         ggtitle("Coverage")
-# # }
-#
-# dfm_1gram <- dfm(tokens_train)
-#
-# # Plot coverage to determine how many words to keep (ie remove words that provide little value)
-# # dfm_freq_plot(dfm_1gram)
-# # plot_coverage(dfm_1gram)
-# # The inflection point seems to be at about 10000 words, over 98% of word instances are covered
-# # Trimming beyond these words significantly reduced tokens and memory load.
-#
-# dfm_1gram_trim <- dfm_trim(dfm_1gram,
-#                     min_termfreq = 5000,
-#                     termfreq_type = "rank")
-#
-# frequent_words <- names(topfeatures(dfm_1gram_trim, n = 20))
-#
+#     ggplot(
+#         data.frame(unique_words, per_word_instance),
+#         aes(x = unique_words, y = per_word_instance)
+#     ) +
+#         geom_line() +
+#         ggtitle("Coverage")
+# }
+
+dfm_1gram <- dfm(tokens_train)
+
+# Plot coverage to determine how many words to keep (ie remove words that provide little value)
+# dfm_freq_plot(dfm_1gram)
+# plot_coverage(dfm_1gram)
+# The inflection point seems to be at about 10000 words, over 98% of word instances are covered
+# Trimming beyond these words significantly reduced tokens and memory load.
+
+dfm_1gram_trim <- dfm_trim(dfm_1gram,
+                    min_termfreq = 5000,
+                    termfreq_type = "rank")
+
+frequent_words <- names(topfeatures(dfm_1gram_trim, n = 20))
+
 # tokens_train <- tokens_select(tokens_train, dfm_1gram_trim@Dimnames$features, padding = F)
 #
 # # Create token ngrams lists:
