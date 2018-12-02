@@ -1,11 +1,9 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+# This is a Shiny web application. 
+# A running version of this app can be found at 
+# https://sinjin.shinyapps.io/next_word/
+# An explanatory presentation of the app can be found at 
+# http://rpubs.com/sinjin/predictive_text
 
 # Setup and load functions & constants ----
 
@@ -117,10 +115,10 @@ next_word_backoff_search <- function(the_string,
     next_words
 }
 
-
 ##### The Shiny app ----
 
 ui <- fluidPage(
+    
     # Header stuff ----
     
     # Javascript to keep focus in textinput box, paired with observeEvent in server
@@ -203,8 +201,6 @@ server <- function(input, output, session) {
         next_word
     })
     
-    
-    
     # This section saves results to a table
     loadData <- function() {
         if (exists("word_scores")) {
@@ -278,8 +274,6 @@ server <- function(input, output, session) {
         loadData()
     })
     
-    
-    
     observeEvent(input$process, {
         output$input_text <- renderUI({
             the_html <-
@@ -327,8 +321,6 @@ server <- function(input, output, session) {
         
     })
     
-    
-    
     observeEvent(input$process, {
         output$the_plot <- renderPlot({
             word_scores[, success := ifelse(score > 0, "Success", "Failure")]
@@ -362,8 +354,6 @@ server <- function(input, output, session) {
             )
         })
     })
-    
-    # -----
     
     output$prediction_buttons <- renderUI({
         splitLayout(
